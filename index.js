@@ -72,6 +72,17 @@ app.get("/clip", async (req, res) => {
         res.status(500).json({ error: "❌ Internal server error." });
     }
 });
+app.get("/test-webhook", async (req, res) => {
+    try {
+        const response = await axios.post(DISCORD_WEBHOOK_URL, {
+            content: "✅ Manual test message from /test-webhook route on Render."
+        });
+        res.send("✅ Test webhook message sent!");
+    } catch (err) {
+        console.error("Webhook test failed:", err.message);
+        res.status(500).send("❌ Webhook test failed.");
+    }
+});
 
 // ✅ Default Route
 app.get("/", (req, res) => {
