@@ -72,15 +72,15 @@ app.get("/clip", async (req, res) => {
         res.status(500).json({ error: "❌ Internal server error." });
     }
 });
-app.get("/test-webhook", async (req, res) => {
+app.get("/ping", async (req, res) => {
     try {
-        const response = await axios.post(DISCORD_WEBHOOK_URL, {
-            content: "✅ Manual test message from /test-webhook route on Render."
+        await axios.post(DISCORD_WEBHOOK_URL, {
+            content: "🔔 Ping test from Render: Webhook is working!"
         });
-        res.send("✅ Test webhook message sent!");
-    } catch (err) {
-        console.error("Webhook test failed:", err.message);
-        res.status(500).send("❌ Webhook test failed.");
+        res.send("✅ Ping sent to Discord!");
+    } catch (error) {
+        console.error("❌ Ping test failed:", error.message);
+        res.status(500).send("❌ Failed to send ping to Discord.");
     }
 });
 
