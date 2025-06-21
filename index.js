@@ -13,36 +13,6 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const COOLDOWN_TIME = 30 * 1000;
 
 let cooldowns = {};
-let messageQueue = [];
-let isRateLimited = false;
-let retryAfter = 0;
-
-// 🕓 Message sender loop
-setInterval(async () => {
-    if (isRateLimited || messageQueue.length === 0) return;
-
-    const message = messageQueue.shift();
-    try {
-        await axios.post(DISCORD_WEBHOOK_URL, { content: message });
-        console.log("✅ Message sent to Discord:", message);
-    } catch (error) {
-        if (error.response?.status === 429) {
-            isRateLimited = true;
-            retryAfter = (error.response.headers["retry-after"] || 10) * 1000;
-            console.warn(`🚫 Rate limited by Discord. Retrying after ${retryAfter / 1000}s`);
-
-            // Push the message back into queue
-            messageQueue.unshift(message);
-
-            // Wait before retrying
-            setTimeout(() => {
-                isRateLimited = false;
-            }, retryAfter);
-        } else {
-            console.error("❌ Failed to send message:", error.message);
-        }
-    }
-}, 3000); // Try sending every 3 seconds (safe interval)
 
 // ✅ Function to get stream start time
 async function getStreamStartTime() {
@@ -60,7 +30,7 @@ async function getStreamStartTime() {
     }
 }
 
-// ✅ /clip route – sends to queue
+// ✅ /clip route – sends instantly
 app.get("/clip", async (req, res) => {
     const user = req.query.user || "Unknown User";
     const message = req.query.message || "No message provided.";
@@ -86,18 +56,38 @@ app.get("/clip", async (req, res) => {
     const clipUrl = `https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp}`;
     const msg = `🎬 **New Clip from ${user}!**\n📢 Message: "${message}"\n🔗 [Watch Clip](${clipUrl})`;
 
-    messageQueue.push(msg);
-    res.json({ queued: true, info: "✅ Clip added to queue. Will be sent shortly." });
+    try {
+        await axios.post(DISCORD_WEBHOOK_URL, { content: msg });
+        res.json({ success: true, info: "✅ Clip sent instantly to Discord." });
+    } catch (error) {
+        if (error.response?.status === 429) {
+            const retryAfter = (error.response.headers["retry-after"] || 10);
+            return res.status(429).json({ error: `🚫 Rate limited. Try again after ${retryAfter} seconds.` });
+        } else {
+            console.error("❌ Failed to send message:", error.message);
+            return res.status(500).json({ error: "❌ Failed to send message to Discord." });
+        }
+    }
 });
 
-// ✅ /ping route – sends to queue
-app.get("/ping", (req, res) => {
+// ✅ /ping route – sends instantly
+app.get("/ping", async (req, res) => {
     if (!DISCORD_WEBHOOK_URL) {
         return res.status(500).send("❌ Webhook URL not set.");
     }
 
-    messageQueue.push("🔔 Ping test from Render: Webhook is working!");
-    res.send("✅ Ping added to queue. Will be sent shortly.");
+    try {
+        await axios.post(DISCORD_WEBHOOK_URL, { content: "🔔 Ping test from Render: Webhook is working!" });
+        res.send("✅ Ping sent instantly to Discord.");
+    } catch (error) {
+        if (error.response?.status === 429) {
+            const retryAfter = (error.response.headers["retry-after"] || 10);
+            return res.status(429).send(`🚫 Rate limited. Try again after ${retryAfter} seconds.`);
+        } else {
+            console.error("❌ Failed to send ping:", error.message);
+            return res.status(500).send("❌ Failed to send ping to Discord.");
+        }
+    }
 });
 
 // ✅ Root route
