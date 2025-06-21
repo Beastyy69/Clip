@@ -56,7 +56,7 @@ app.get("/clip", async (req, res) => {
 
     try {
         await axios.post(DISCORD_WEBHOOK_URL, { content: msg });
-        res.json({ success: true, info: "clipped sent to discord" });
+        res.json({ success: true, info: "Clipped successfully 👍 in discord.gg/voidmystery server" });
     } catch (error) {
         console.error("❌ Failed to send clip:", error.message);
         res.status(500).json({ error: "❌ Could not send to Discord." });
