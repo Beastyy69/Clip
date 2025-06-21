@@ -14,7 +14,6 @@ const COOLDOWN_TIME = 30 * 1000;
 
 let cooldowns = {};
 
-// Function to get YouTube stream start time
 async function getStreamStartTime() {
     try {
         const response = await axios.get(
@@ -30,16 +29,15 @@ async function getStreamStartTime() {
     }
 }
 
-// /clip route – instantly sends clip message to Discord
 app.get("/clip", async (req, res) => {
     const user = req.query.user || "Unknown User";
+    const message = req.query.message || "No message provided.";
     const now = Math.floor(Date.now() / 1000);
 
     if (!DISCORD_WEBHOOK_URL || !YOUTUBE_VIDEO_ID || !YOUTUBE_API_KEY) {
         return res.status(500).json({ error: "❌ Missing required environment variables." });
     }
 
-    // Cooldown check
     if (cooldowns[user] && now - cooldowns[user] < COOLDOWN_TIME / 1000) {
         const timeLeft = Math.ceil(COOLDOWN_TIME / 1000 - (now - cooldowns[user]));
         return res.status(429).json({ error: `⚠️ Wait ${timeLeft}s before clipping again.` });
@@ -52,9 +50,9 @@ app.get("/clip", async (req, res) => {
         return res.status(500).json({ error: "❌ Failed to get stream start time." });
     }
 
-    const timestamp = Math.max(now - streamStartTime - 150, 0); // 150 sec rewind
+    const timestamp = Math.max(now - streamStartTime - 150, 0);
     const clipUrl = `https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp}`;
-    const msg = `🎬 Clip by **${user}**: [Watch Clip](${clipUrl})`;
+    const msg = `🎬 **Clip by ${user}!**\n📝 Message: "${message}"\n🔗 [Watch Clip](${clipUrl})`;
 
     try {
         await axios.post(DISCORD_WEBHOOK_URL, { content: msg });
@@ -65,6 +63,5 @@ app.get("/clip", async (req, res) => {
     }
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
