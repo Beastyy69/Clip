@@ -14,15 +14,10 @@ const COOLDOWN_TIME = 30 * 1000;
 
 let cooldowns = {};
 
-// ✅ NEW: Home route to fix "Cannot GET /"
-app.get("/", (req, res) => {
-    res.send("✅ Clip Bot is running. Use /clip?user=Name&message=YourMessage");
-});
-
 async function getStreamStartTime() {
     try {
         const response = await axios.get(
-            `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${YOUTUBE_VIDEO_ID}&key=${YOUTUBE_API_KEY}`
+            https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${YOUTUBE_VIDEO_ID}&key=${YOUTUBE_API_KEY}
         );
         const streamDetails = response.data.items[0]?.liveStreamingDetails;
         return streamDetails?.actualStartTime
@@ -45,7 +40,7 @@ app.get("/clip", async (req, res) => {
 
     if (cooldowns[user] && now - cooldowns[user] < COOLDOWN_TIME / 1000) {
         const timeLeft = Math.ceil(COOLDOWN_TIME / 1000 - (now - cooldowns[user]));
-        return res.status(429).json({ error: `⚠️ Wait ${timeLeft}s before clipping again.` });
+        return res.status(429).json({ error: ⚠️ Wait ${timeLeft}s before clipping again. });
     }
 
     cooldowns[user] = now;
@@ -56,12 +51,12 @@ app.get("/clip", async (req, res) => {
     }
 
     const timestamp = Math.max(now - streamStartTime - 150, 0);
-    const clipUrl = `https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp}`;
-    const msg = `🎬 **Clip by ${user}!**\n📝 Message: "${message}"\n🔗 [Watch Clip](${clipUrl})`;
+    const clipUrl = https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp};
+    const msg = 🎬 **Clip by ${user}!**\n📝 Message: "${message}"\n🔗 [Watch Clip](${clipUrl});
 
     try {
         await axios.post(DISCORD_WEBHOOK_URL, { content: msg });
-        res.json({ success: true, info: "📸 Clipped successfully and sent to Discord!" });
+        res.json({ success: true, info: "Clipped successfully 👍 in discord.gg/voidmystery server" });
     } catch (error) {
         console.error("❌ Failed to send clip:", error.message);
         res.status(500).json({ error: "❌ Could not send to Discord." });
@@ -69,4 +64,4 @@ app.get("/clip", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(🚀 Server running on port ${PORT}));
