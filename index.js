@@ -130,3 +130,18 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server live on port ${PORT}`);
 });
+app.get("/test", async (req, res) => {
+    if (!DISCORD_WEBHOOK_URL) {
+        return res.status(500).send("❌ Webhook URL is not set.");
+    }
+
+    try {
+        await axios.post(DISCORD_WEBHOOK_URL, {
+            content: "👋 Test message: Webhook is connected and working!"
+        });
+        res.send("✅ Test message sent to Discord!");
+    } catch (error) {
+        console.error("❌ Failed to send test message:", error.message);
+        res.status(500).send("❌ Failed to send test message.");
+    }
+});
