@@ -17,7 +17,7 @@ let messageQueue = [];
 let isRateLimited = false;
 let retryAfter = 0;
 
-// 🕓 Message sender loop
+// 🕓 Message sender loop (runs every 3 seconds)
 setInterval(async () => {
     if (isRateLimited || messageQueue.length === 0) return;
 
@@ -29,12 +29,12 @@ setInterval(async () => {
         if (error.response?.status === 429) {
             isRateLimited = true;
             retryAfter = (error.response.headers["retry-after"] || 10) * 1000;
-            console.warn(🚫 Rate limited by Discord. Retrying after ${retryAfter / 1000}s);
+            console.warn(`🚫 Rate limited by Discord. Retrying after ${retryAfter / 1000}s`);
 
             // Push the message back into queue
             messageQueue.unshift(message);
 
-            // Wait before retrying
+            // Resume after delay
             setTimeout(() => {
                 isRateLimited = false;
             }, retryAfter);
@@ -42,13 +42,13 @@ setInterval(async () => {
             console.error("❌ Failed to send message:", error.message);
         }
     }
-}, 3000); // Try sending every 3 seconds (safe interval)
+}, 3000);
 
-// ✅ Function to get stream start time
+// ✅ Fetch YouTube stream start time
 async function getStreamStartTime() {
     try {
         const response = await axios.get(
-            https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${YOUTUBE_VIDEO_ID}&key=${YOUTUBE_API_KEY}
+            `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${YOUTUBE_VIDEO_ID}&key=${YOUTUBE_API_KEY}`
         );
         const streamDetails = response.data.items[0]?.liveStreamingDetails;
         return streamDetails?.actualStartTime
@@ -60,7 +60,7 @@ async function getStreamStartTime() {
     }
 }
 
-// ✅ /clip route – sends to queue
+// ✅ /clip route
 app.get("/clip", async (req, res) => {
     const user = req.query.user || "Unknown User";
     const message = req.query.message || "No message provided.";
@@ -72,7 +72,7 @@ app.get("/clip", async (req, res) => {
 
     if (cooldowns[user] && now - cooldowns[user] < COOLDOWN_TIME / 1000) {
         const timeLeft = Math.ceil(COOLDOWN_TIME / 1000 - (now - cooldowns[user]));
-        return res.status(429).json({ error: ⚠️ Too many requests! Wait ${timeLeft}s. });
+        return res.status(429).json({ error: `⚠️ Too many requests! Wait ${timeLeft}s.` });
     }
 
     cooldowns[user] = now;
@@ -82,15 +82,16 @@ app.get("/clip", async (req, res) => {
         return res.status(500).json({ error: "❌ Could not fetch stream start time." });
     }
 
-    const timestamp = Math.max(now - streamStartTime - 150, 0);
-    const clipUrl = https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp};
-    const msg = 🎬 **New Clip from ${user}!**\n📢 Message: "${message}"\n🔗 [Watch Clip](${clipUrl});
+    // Use 40-second clip offset
+    const timestamp = Math.max(now - streamStartTime - 40, 0);
+    const clipUrl = `https://youtu.be/${YOUTUBE_VIDEO_ID}?t=${timestamp}`;
+    const msg = `🎬 **New Clip from ${user}!**\n📢 Message: "${message}"\n🔗 [Watch Clip](${clipUrl})`;
 
     messageQueue.push(msg);
-    res.json({ queued: true, info: "✅ Clip added to queue. Will be sent shortly." });
+    res.send("✅ Clip saved! Will be sent to Discord shortly.");
 });
 
-// ✅ /ping route – sends to queue
+// ✅ /ping route – manual test
 app.get("/ping", (req, res) => {
     if (!DISCORD_WEBHOOK_URL) {
         return res.status(500).send("❌ Webhook URL not set.");
@@ -100,18 +101,11 @@ app.get("/ping", (req, res) => {
     res.send("✅ Ping added to queue. Will be sent shortly.");
 });
 
-// ✅ Root route
-app.get("/", (req, res) => {
-    res.send("🚀 Server running. Use /clip or /ping to test.");
-});
-
-// ✅ Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => console.log(🚀 Server live on port ${PORT})); 
+// ✅ /send route – manual custom message
 app.get("/send", async (req, res) => {
     const message = req.query.message || "📢 Test message from /send route!";
     try {
-        await axios.post(process.env.WEBHOOK_URL, {
+        await axios.post(DISCORD_WEBHOOK_URL, {
             content: message,
         });
         res.send("✅ Message sent to Discord: " + message);
@@ -120,3 +114,12 @@ app.get("/send", async (req, res) => {
         res.status(500).send("❌ Failed to send webhook message.");
     }
 });
+
+// ✅ Default root route
+app.get("/", (req, res) => {
+    res.send("🚀 Server running. Use /clip or /ping to test.");
+});
+
+// ✅ Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server live on port ${PORT}`));
