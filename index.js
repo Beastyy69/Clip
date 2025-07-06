@@ -14,6 +14,11 @@ const COOLDOWN_TIME = 30 * 1000;
 
 let cooldowns = {};
 
+// ✅ NEW: Home route to fix "Cannot GET /"
+app.get("/", (req, res) => {
+    res.send("✅ Clip Bot is running. Use /clip?user=Name&message=YourMessage");
+});
+
 async function getStreamStartTime() {
     try {
         const response = await axios.get(
@@ -56,7 +61,7 @@ app.get("/clip", async (req, res) => {
 
     try {
         await axios.post(DISCORD_WEBHOOK_URL, { content: msg });
-        res.json({ success: true, info: "Clipped successfully 👍 in discord.gg/voidmystery server" });
+        res.json({ success: true, info: "📸 Clipped successfully and sent to Discord!" });
     } catch (error) {
         console.error("❌ Failed to send clip:", error.message);
         res.status(500).json({ error: "❌ Could not send to Discord." });
